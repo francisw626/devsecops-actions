@@ -187,6 +187,7 @@ runs:
       uses: ./sca/repository
 
     - name: 📊 Dependencies
+      if: github.event_name == 'pull_request' || github.event_name == 'pull_request_target'
       uses: ./sca/dependencies
       with:
         dependency-review-config-file: ${{ inputs.dependency-review-config-file }}
