@@ -60,6 +60,8 @@ permissions: {}
 env:
   environment: base
   timezone: ${{ vars.TIMEZONE }}
+  sca_mandatory_owasp: ${{ vars.SCA_MANDATORY_OWASP || 'true' }}
+  sca_mandatory_sbom: ${{ vars.SCA_MANDATORY_SBOM || 'false' }}
 
 jobs:
   setup:
@@ -97,6 +99,8 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SCA_MANDATORY_OWASP: ${{ env.sca_mandatory_owasp }}
+          SCA_MANDATORY_SBOM: ${{ env.sca_mandatory_sbom }}
         run: |
           set -euo pipefail
           dependency_related=true
@@ -133,13 +137,22 @@ jobs:
             done
           fi
 
+          run_owasp="${dependency_related}"
+          if [ "${SCA_MANDATORY_OWASP}" = "true" ]; then
+            run_owasp=true
+          fi
+
           run_sbom=false
           if [ "${dependency_related}" = "true" ] || [ "${docker_sources_changed}" = "true" ]; then
+            run_sbom=true
+          fi
+          if [ "${SCA_MANDATORY_SBOM}" = "true" ]; then
             run_sbom=true
           fi
 
           echo "dependency_related=${dependency_related}" >> "${GITHUB_OUTPUT}"
           echo "docker_sources_changed=${docker_sources_changed}" >> "${GITHUB_OUTPUT}"
+          echo "run_owasp=${run_owasp}" >> "${GITHUB_OUTPUT}"
           echo "run_sbom=${run_sbom}" >> "${GITHUB_OUTPUT}"
 
       - name: ⚡️ SCA
@@ -150,5 +163,5 @@ jobs:
           dependency-review-config-file: "./.github/dependency-review-config.yml" # Optional
           docker-images-file: "${{ github.workspace }}/sources.json" # Optional
           dependency-check-suppression-file: "dependency-check-suppression.xml" # Optional
-          run-owasp: ${{ steps.scope.outputs.dependency_related }}
+          run-owasp: ${{ steps.scope.outputs.run_owasp }}
           run-sbom: ${{ steps.scope.outputs.run_sbom }}
