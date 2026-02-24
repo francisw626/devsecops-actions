@@ -184,49 +184,49 @@ runs:
   steps:
     - name: 📦 Repository
       if: inputs.checkout == 'true'
-      uses: ./repository
+      uses: ./sca/repository
 
     - name: 📊 Dependencies
-      uses: ./dependencies
+      uses: ./sca/dependencies
       with:
         dependency-review-config-file: ${{ inputs.dependency-review-config-file }}
 
     - name: 🔎 OWASP
       if: inputs.run-owasp == 'true'
-      uses: ./owasp
+      uses: ./sca/owasp
       with:
         output-directory-name: ${{ inputs.output-directory-name }}
         dependency-check-suppression-file: ${{ inputs.dependency-check-suppression-file }}
 
     - name: 🔁 Renovate
       if: inputs.renovate == 'true'
-      uses: ./renovate
+      uses: ./sca/renovate
       with:
         token: ${{ inputs.token }}
         renovate-version: ${{ inputs.renovate-version }}
 
     - name: 🔑 Secrets
-      uses: ./moj
+      uses: ./sca/moj
 
     - name: 🐷 TruffleHog
-      uses: ./trufflehog
+      uses: ./sca/trufflehog
       with:
         trufflehog-config-file: ${{ inputs.trufflehog-config-file }}
         trufflehog-output-filename: ${{ inputs.trufflehog-output-filename }}
 
     - name: ⚙️ CodeQL
-      uses: ./codeql
+      uses: ./sca/codeql
       with:
         codeql-languages: ${{ inputs.codeql-languages }}
         codeql-config-file: ${{ inputs.codeql-config-file }}
         codeql-upload-findings: ${{ inputs.codeql-upload-findings }}
 
     - name: 🛡 OpenSSF
-      uses: ./ossf
+      uses: ./sca/ossf
 
     - name: 📋 SBOM
       if: inputs.run-sbom == 'true'
-      uses: ./sbom
+      uses: ./sca/sbom
       with:
         node-version: ${{ inputs.node-version }}
         docker-images-file: ${{ inputs.docker-images-file }}
