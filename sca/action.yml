@@ -105,6 +105,11 @@ inputs:
     required: true
     description: "GitHub repository token with read/write permissions for contents, pull requests, and issues, plus read-only access to security events"
 
+  checkout:
+    required: false
+    description: "Checkout repository before scanning"
+    default: "true"
+
   renovate:
     required: false
     description: "Enable or disable Renovate bot for automated dependency updates"
@@ -164,51 +169,64 @@ inputs:
     description: "The file paths to the suppression XML files"
     default: ""
 
+  run-owasp:
+    required: false
+    description: "Run OWASP dependency check scan"
+    default: "true"
+
+  run-sbom:
+    required: false
+    description: "Run SBOM generation scan"
+    default: "true"
+
 runs:
   using: composite
   steps:
     - name: 📦 Repository
-      uses: ministryofjustice/devsecops-actions/sca/repository@ed5f0ccf80ccb6628639b29882d9ec3b0281ce44
+      if: inputs.checkout == 'true'
+      uses: ./repository
 
     - name: 📊 Dependencies
-      uses: ministryofjustice/devsecops-actions/sca/dependencies@ed5f0ccf80ccb6628639b29882d9ec3b0281ce44
+      uses: ./dependencies
       with:
         dependency-review-config-file: ${{ inputs.dependency-review-config-file }}
 
     - name: 🔎 OWASP
-      uses: ministryofjustice/devsecops-actions/sca/owasp@ed5f0ccf80ccb6628639b29882d9ec3b0281ce44
+      if: inputs.run-owasp == 'true'
+      uses: ./owasp
       with:
         output-directory-name: ${{ inputs.output-directory-name }}
         dependency-check-suppression-file: ${{ inputs.dependency-check-suppression-file }}
 
     - name: 🔁 Renovate
       if: inputs.renovate == 'true'
-      uses: ministryofjustice/devsecops-actions/sca/renovate@ed5f0ccf80ccb6628639b29882d9ec3b0281ce44
+      uses: ./renovate
       with:
         token: ${{ inputs.token }}
         renovate-version: ${{ inputs.renovate-version }}
 
     - name: 🔑 Secrets
-      uses: ministryofjustice/devsecops-actions/sca/moj@ed5f0ccf80ccb6628639b29882d9ec3b0281ce44
+      uses: ./moj
 
     - name: 🐷 TruffleHog
-      uses: ministryofjustice/devsecops-actions/sca/trufflehog@ed5f0ccf80ccb6628639b29882d9ec3b0281ce44
+      uses: ./trufflehog
       with:
         trufflehog-config-file: ${{ inputs.trufflehog-config-file }}
         trufflehog-output-filename: ${{ inputs.trufflehog-output-filename }}
 
     - name: ⚙️ CodeQL
-      uses: ministryofjustice/devsecops-actions/sca/codeql@ed5f0ccf80ccb6628639b29882d9ec3b0281ce44
+      uses: ./codeql
       with:
         codeql-languages: ${{ inputs.codeql-languages }}
         codeql-config-file: ${{ inputs.codeql-config-file }}
         codeql-upload-findings: ${{ inputs.codeql-upload-findings }}
 
     - name: 🛡 OpenSSF
-      uses: ministryofjustice/devsecops-actions/sca/ossf@ed5f0ccf80ccb6628639b29882d9ec3b0281ce44
+      uses: ./ossf
 
     - name: 📋 SBOM
-      uses: ministryofjustice/devsecops-actions/sca/sbom@ed5f0ccf80ccb6628639b29882d9ec3b0281ce44
+      if: inputs.run-sbom == 'true'
+      uses: ./sbom
       with:
         node-version: ${{ inputs.node-version }}
         docker-images-file: ${{ inputs.docker-images-file }}
