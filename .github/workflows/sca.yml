@@ -60,8 +60,12 @@ permissions: {}
 env:
   environment: base
   timezone: ${{ vars.TIMEZONE }}
-  sca_mandatory_owasp: ${{ vars.SCA_MANDATORY_OWASP || 'true' }}
-  sca_mandatory_sbom: ${{ vars.SCA_MANDATORY_SBOM || 'false' }}
+  sca_run_dependencies: ${{ vars.SCA_RUN_DEPENDENCIES || 'true' }}
+  sca_run_renovate: ${{ vars.SCA_RUN_RENOVATE || 'true' }}
+  sca_run_secrets: ${{ vars.SCA_RUN_SECRETS || 'true' }}
+  sca_run_trufflehog: ${{ vars.SCA_RUN_TRUFFLEHOG || 'true' }}
+  sca_run_codeql: ${{ vars.SCA_RUN_CODEQL || 'true' }}
+  sca_run_ossf: ${{ vars.SCA_RUN_OSSF || 'true' }}
 
 jobs:
   setup:
@@ -94,74 +98,16 @@ jobs:
       - name: Repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Scope
-        id: scope
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SCA_MANDATORY_OWASP: ${{ env.sca_mandatory_owasp }}
-          SCA_MANDATORY_SBOM: ${{ env.sca_mandatory_sbom }}
-        run: |
-          set -euo pipefail
-          dependency_related=true
-          docker_sources_changed=true
-
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            dependency_related=false
-            docker_sources_changed=false
-            api_url="${{ github.api_url }}/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files?per_page=100"
-            dependency_pattern='(^|/)(package\.json|package-lock\.json|npm-shrinkwrap\.json|pnpm-lock\.yaml|yarn\.lock|requirements(\-.*)?\.txt|Pipfile|Pipfile\.lock|pyproject\.toml|poetry\.lock|pom\.xml|build\.gradle(\.kts)?|settings\.gradle(\.kts)?|gradle/libs\.versions\.toml|go\.mod|go\.sum|Cargo\.toml|Cargo\.lock|Gemfile|Gemfile\.lock|composer\.json|composer\.lock|paket\.dependencies|paket\.lock|Directory\.Packages\.props|[^/]+\.(csproj|fsproj|vbproj)|dependency-check-suppression\.xml)$'
-            docker_pattern='(^|/)sources\.json$'
-
-            while [ -n "${api_url}" ]; do
-              headers_file="$(mktemp)"
-              body_file="$(mktemp)"
-
-              curl -sS -L \
-                -D "${headers_file}" \
-                -H "Authorization: Bearer ${GH_TOKEN}" \
-                -H "Accept: application/vnd.github+json" \
-                "${api_url}" > "${body_file}"
-
-              files="$(jq -r 'if type=="array" then .[]?.filename else empty end' "${body_file}")"
-
-              if echo "${files}" | grep -Eq "${dependency_pattern}"; then
-                dependency_related=true
-              fi
-
-              if echo "${files}" | grep -Eq "${docker_pattern}"; then
-                docker_sources_changed=true
-              fi
-
-              api_url="$(sed -n 's/^link:.*<\([^>]*\)>; rel="next".*/\1/pI' "${headers_file}")"
-            done
-          fi
-
-          run_owasp="${dependency_related}"
-          if [ "${SCA_MANDATORY_OWASP}" = "true" ]; then
-            run_owasp=true
-          fi
-
-          run_sbom=false
-          if [ "${dependency_related}" = "true" ] || [ "${docker_sources_changed}" = "true" ]; then
-            run_sbom=true
-          fi
-          if [ "${SCA_MANDATORY_SBOM}" = "true" ]; then
-            run_sbom=true
-          fi
-
-          echo "dependency_related=${dependency_related}" >> "${GITHUB_OUTPUT}"
-          echo "docker_sources_changed=${docker_sources_changed}" >> "${GITHUB_OUTPUT}"
-          echo "run_owasp=${run_owasp}" >> "${GITHUB_OUTPUT}"
-          echo "run_sbom=${run_sbom}" >> "${GITHUB_OUTPUT}"
-
       - name: ⚡️ SCA
         uses: ./sca
         with:
           token: "${{ secrets.GITHUB_TOKEN }}" # Mandatory
-          checkout: "false"
+          run-dependencies: ${{ env.sca_run_dependencies }}
+          renovate: ${{ env.sca_run_renovate }}
+          run-secrets: ${{ env.sca_run_secrets }}
+          run-trufflehog: ${{ env.sca_run_trufflehog }}
+          run-codeql: ${{ env.sca_run_codeql }}
+          run-ossf: ${{ env.sca_run_ossf }}
           dependency-review-config-file: "./.github/dependency-review-config.yml" # Optional
           docker-images-file: "${{ github.workspace }}/sources.json" # Optional
           dependency-check-suppression-file: "dependency-check-suppression.xml" # Optional
-          run-owasp: ${{ steps.scope.outputs.run_owasp }}
-          run-sbom: ${{ steps.scope.outputs.run_sbom }}

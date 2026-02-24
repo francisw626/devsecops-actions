@@ -105,14 +105,34 @@ inputs:
     required: true
     description: "GitHub repository token with read/write permissions for contents, pull requests, and issues, plus read-only access to security events"
 
-  checkout:
-    required: false
-    description: "Checkout repository before scanning"
-    default: "true"
-
   renovate:
     required: false
     description: "Enable or disable Renovate bot for automated dependency updates"
+    default: "true"
+
+  run-dependencies:
+    required: false
+    description: "Enable or disable dependency review checks on pull requests"
+    default: "true"
+
+  run-secrets:
+    required: false
+    description: "Enable or disable MOJ secret scanning"
+    default: "true"
+
+  run-trufflehog:
+    required: false
+    description: "Enable or disable TruffleHog secret scanning"
+    default: "true"
+
+  run-codeql:
+    required: false
+    description: "Enable or disable CodeQL analysis"
+    default: "true"
+
+  run-ossf:
+    required: false
+    description: "Enable or disable OpenSSF Scorecard checks"
     default: "true"
 
   node-version:
@@ -169,31 +189,19 @@ inputs:
     description: "The file paths to the suppression XML files"
     default: ""
 
-  run-owasp:
-    required: false
-    description: "Run OWASP dependency check scan"
-    default: "true"
-
-  run-sbom:
-    required: false
-    description: "Run SBOM generation scan"
-    default: "true"
-
 runs:
   using: composite
   steps:
     - name: 📦 Repository
-      if: inputs.checkout == 'true'
       uses: ./sca/repository
 
     - name: 📊 Dependencies
-      if: github.event_name == 'pull_request' || github.event_name == 'pull_request_target'
+      if: inputs.run-dependencies == 'true' && (github.event_name == 'pull_request' || github.event_name == 'pull_request_target')
       uses: ./sca/dependencies
       with:
         dependency-review-config-file: ${{ inputs.dependency-review-config-file }}
 
     - name: 🔎 OWASP
-      if: inputs.run-owasp == 'true'
       uses: ./sca/owasp
       with:
         output-directory-name: ${{ inputs.output-directory-name }}
@@ -207,15 +215,18 @@ runs:
         renovate-version: ${{ inputs.renovate-version }}
 
     - name: 🔑 Secrets
+      if: inputs.run-secrets == 'true'
       uses: ./sca/moj
 
     - name: 🐷 TruffleHog
+      if: inputs.run-trufflehog == 'true'
       uses: ./sca/trufflehog
       with:
         trufflehog-config-file: ${{ inputs.trufflehog-config-file }}
         trufflehog-output-filename: ${{ inputs.trufflehog-output-filename }}
 
     - name: ⚙️ CodeQL
+      if: inputs.run-codeql == 'true'
       uses: ./sca/codeql
       with:
         codeql-languages: ${{ inputs.codeql-languages }}
@@ -223,10 +234,10 @@ runs:
         codeql-upload-findings: ${{ inputs.codeql-upload-findings }}
 
     - name: 🛡 OpenSSF
+      if: inputs.run-ossf == 'true'
       uses: ./sca/ossf
 
     - name: 📋 SBOM
-      if: inputs.run-sbom == 'true'
       uses: ./sca/sbom
       with:
         node-version: ${{ inputs.node-version }}
