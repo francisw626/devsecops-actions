@@ -113,6 +113,8 @@ runs:
       uses: actions/setup-node@65d868f8d4d85d7d4abb7de0875cde3fcc8798f5 # v6.1.0
       with:
         node-version: ${{ inputs.node-version }}
+        cache: npm
+        cache-dependency-path: package-lock.json
 
     - name: Install
       shell: bash

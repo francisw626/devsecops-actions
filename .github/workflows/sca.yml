@@ -40,6 +40,9 @@
 
 name: SCA ⚡️
 run-name: Software Composition Analysis ⚡️
+concurrency:
+  group: sca-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 on:
   schedule:
