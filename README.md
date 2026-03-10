@@ -24,8 +24,10 @@ scanning, dependency management, template synchronisation, and compliance report
 - **Software Composition Analysis** - Multi-tool dependency vulnerability detection
 - **Secret Scanning** - Dual-engine credential exposure prevention
 - **SAST & Code Analysis** - Semantic security vulnerability detection
-- **Template Synchronization** - Automated Cookiecutter/Cruft updates
+- **Template Synchronisation** - Automated Cookiecutter/Cruft updates
 - **SBOM Generation** - Software Bill of Materials for supply chain transparency
+- **Repository Management** - Dormant repository detection and archival workflows
+- **Commit Validation** - Signature verification and conventional commit enforcement
 - **Compliance Reporting** - Security posture assessment and audit trails
 
 ---
@@ -34,7 +36,6 @@ scanning, dependency management, template synchronisation, and compliance report
 
 - [Architecture](#️-architecture)
 - [Available Actions](#-available-actions)
-- [Quick Start](#-quick-start)
 - [Development](#️-development)
 - [Contributing](#-contributing)
 - [License](#-license)
@@ -150,20 +151,30 @@ Orchestrates 4 specialized components:
 
 **Path**: `ministryofjustice/devsecops-actions/github`
 
-Enterprise-grade repository health monitoring and lifecycle management actions that automate governance, compliance, and archival workflows.
+Repository health monitoring, lifecycle management, and commit validation actions that automate governance, compliance, and quality workflows.
 
-#### Introduction
+#### Available GitHub Actions
 
-Orchestrates repository management capabilities:
+1. **📦 Repository Archive Check** - Identifies dormant repositories eligible for archival
+2. **🔐 Commit Validation** - Enforces commit signing and conventional commit messages
 
-1. **🔎 Archive Check** - Identifies dormant repositories eligible for archival
-2. **📧 Notification System** - GOV.UK Notify email alerts
-3. **📊 Activity Analysis** - Commit history scanning
-4. **⚙️ Lifecycle Automation** - Proactive governance workflows
+---
 
-#### Code
+#### 📦 Repository Archive Check
 
-**Basic Archive Check:**
+**Path**: `ministryofjustice/devsecops-actions/github/repository/archive`
+
+Automated repository health monitoring that scans commit history to identify dormant repositories.
+
+**Key Features:**
+
+- ✅ **Configurable Thresholds** - Custom inactivity periods
+- ✅ **Email Notifications** - GOV.UK Notify integration
+- ✅ **Commit Analysis** - Deep repository activity scanning
+- ✅ **Non-Destructive** - Analysis only, no auto-archival
+- ✅ **Audit Trail** - Complete logging of checks
+
+**Code:**
 
 ```yaml
 - uses: ministryofjustice/devsecops-actions/github/repository/archive@v1.3.0
@@ -174,116 +185,31 @@ Orchestrates repository management capabilities:
     gov-notify-template-id: ${{ secrets.GOV_NOTIFY_TEMPLATE_ID }}
 ```
 
-**Custom Threshold:**
-
-```yaml
-- uses: ministryofjustice/devsecops-actions/github/repository/archive@v1.3.0
-  with:
-    token: ${{ secrets.GITHUB_TOKEN }}
-    archival-days: "180"
-    notification-email: "governance@example.gov.uk"
-    gov-notify-key: ${{ secrets.GOV_NOTIFY_API_KEY }}
-    gov-notify-template-id: ${{ secrets.GOV_NOTIFY_TEMPLATE_ID }}
-```
-
-#### Features
-
-- ✅ **Configurable Thresholds** - Custom inactivity periods
-- ✅ **Email Notifications** - GOV.UK Notify integration
-- ✅ **Commit Analysis** - Deep repository activity scanning
-- ✅ **Non-Destructive** - Analysis only, no auto-archival
-- ✅ **Audit Trail** - Complete logging of checks
-
-**[📖 Full GitHub Actions Documentation](github/README.md)**
+**[📖 Full Archive Check Documentation](github/repository/archive/README.md)**
 
 ---
 
-## 🎯 Quick Start
+#### 🔐 Commit Validation
 
-### Prerequisites
+**Path**: `ministryofjustice/devsecops-actions/github/commit`
 
-| Component        | Requirement                                 |
-| ---------------- | ------------------------------------------- |
-| **GitHub Token** | Workflow token with appropriate permissions |
-| **Repository**   | GitHub repository with Actions enabled      |
-| **Permissions**  | Explicitly declared in workflow file        |
+Comprehensive commit verification that validates Git commits for security and quality standards.
 
-### Basic SCA Workflow
+**Key Features:**
 
-Create `.github/workflows/sca.yml`:
+- ✅ **Signature Verification** - Ensures commits are cryptographically signed (GPG/SSH)
+- ✅ **Conventional Commits** - Enforces standardised commit message format
+- ✅ **Zero Configuration** - Works out-of-the-box with sensible defaults
+- ✅ **Customisable** - Supports custom commitlint configurations
+- ✅ **Fast Validation** - Lightweight verification process
 
-```yaml
-name: SCA
-run-name: Security Scanning ⚡️
-
-on:
-  schedule:
-    - cron: "0 0 * * *"
-  pull_request:
-    branches: ["**"]
-
-permissions: {}
-
-jobs:
-  sca:
-    name: Software Composition Analysis
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: write
-      security-events: read
-
-    steps:
-      - uses: ministryofjustice/devsecops-actions/sca@v1.3.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-```
-
-### Basic Cruft Workflow
-
-Create `.github/workflows/cruft.yml`:
+**Code:**
 
 ```yaml
-name: Template Sync
-run-name: Cruft Update 🚀
-
-on:
-  schedule:
-    - cron: "0 2 * * 1" # Weekly
-  workflow_dispatch:
-
-permissions: {}
-
-jobs:
-  cruft:
-    name: Synchronize Template
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-
-    permissions:
-      contents: write
-      pull-requests: write
-
-    steps:
-      - uses: actions/checkout@v4.2.2
-
-      - uses: ministryofjustice/devsecops-actions/cruft@v1.3.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+- uses: ministryofjustice/devsecops-actions/github/commit@v1.3.0
 ```
 
-### Versioning Best Practices
-
-```yaml
-# ✅ Recommended: Commit SHA (maximum stability)
-uses: ministryofjustice/devsecops-actions/sca@9babea875cafae0e3b05a5ec5aca76d6b560c42e
-
-# ⚠️ Not recommended: Branch names
-uses: ministryofjustice/devsecops-actions/sca@v1.3.0
-```
+**[📖 Full Commit Validation Documentation](github/commit/README.md)**
 
 ---
 
@@ -406,7 +332,7 @@ We welcome contributions from the community! Whether it's bug fixes, feature add
 feat(sca): add support for custom SBOM formats
 fix(codeql): resolve timeout issue for large repositories
 docs(readme): add enterprise configuration examples
-chore(deps): update renovate to v42.64.1
+chore(deps): update renovate to v43.31.1
 ```
 
 ### Development Workflow
@@ -460,7 +386,7 @@ When reporting issues, please use the appropriate template:
 
 ### Community
 
-- **Maintainer**: Ministry of Justice Platform & Architecture Team
+- **Maintainer**: Ministry of Justice OCTO Cyber team
 - **Active Development**: ✅ Actively maintained
 - **Support**: Community-driven with MoJ maintainer oversight
 
